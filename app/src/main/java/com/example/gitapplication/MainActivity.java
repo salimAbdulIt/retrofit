@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity{
     private Call<List<Repository>> task;
     private String lastNicknameForTask;
     private boolean isTaskFinished = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         int SDK_INT = android.os.Build.VERSION.SDK_INT;
@@ -66,13 +67,7 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void onSubmit() {
-        try {
-            getAllRepositories(nicknameView.getText().toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-            listView.setAdapter(null);
-        }
-
+        getAllRepositories(nicknameView.getText().toString());
     }
     private void finishTask(){
         isTaskFinished = true;
@@ -112,7 +107,7 @@ public class MainActivity extends AppCompatActivity{
         });
     }
 
-    private void getAllRepositories(String nick) throws IOException {
+    private void getAllRepositories(String nick) {
         if (!isTaskFinished)
             return;
         startTask(nick);
