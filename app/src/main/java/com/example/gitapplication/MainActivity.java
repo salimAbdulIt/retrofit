@@ -79,7 +79,6 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void startTask(String nick){
-        System.out.println("tastStarted");
         lastNicknameForTask = nick;
         isTaskFinished = false;
         Retrofit retrofit = new Retrofit.Builder()
@@ -114,7 +113,6 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void getAllRepositories(String nick) throws IOException {
-        System.out.println("executed");
         if (!isTaskFinished)
             return;
         startTask(nick);
