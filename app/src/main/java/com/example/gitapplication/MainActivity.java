@@ -1,12 +1,9 @@
 package com.example.gitapplication;
 
-import android.os.Message;
 import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -14,35 +11,30 @@ import android.widget.ListView;
 
 import com.example.gitapplication.entity.Repositories;
 import com.example.gitapplication.entity.Repository;
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-/**
- * A login screen that offers login via email/password.
- */
-public class LoginActivity extends AppCompatActivity{
 
+public class MainActivity extends AppCompatActivity{
 
-    public static LoginActivity activity;
-    private AutoCompleteTextView mEmailView;
+    private static final String url = "https://api.github.com/";
+    private AutoCompleteTextView nicknameView;
     private ListView listView;
-
+    private Call<List<Repository>> task;
+    private String lastNicknameForTask;
+    private boolean isTaskFinished = true;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        activity = this;
         int SDK_INT = android.os.Build.VERSION.SDK_INT;
         if (SDK_INT > 8)
         {
@@ -51,60 +43,82 @@ public class LoginActivity extends AppCompatActivity{
             StrictMode.setThreadPolicy(policy);
         }
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-        mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
-        listView = (ListView) findViewById(R.id.list_view);
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
-        mEmailSignInButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                attemptLogin();
-            }
-        });
+        setContentView(R.layout.main_activity);
+        nicknameView = findViewById(R.id.nickname);
+        listView = findViewById(R.id.list_view);
+        Button mEmailSignInButton = findViewById(R.id.submit_button);
+        mEmailSignInButton.setOnClickListener(view -> onSubmit());
     }
 
-    private void attemptLogin() {
+    @Override
+    protected void onStop() {
+        super.onStop();
+        task.cancel();
+        finishTask();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (task == null || !task.isCanceled())
+            return;
+        startTask(lastNicknameForTask);
+    }
+
+    private void onSubmit() {
         try {
-            getAllRepositories(mEmailView.getText().toString());
+            getAllRepositories(nicknameView.getText().toString());
         } catch (IOException e) {
             e.printStackTrace();
             listView.setAdapter(null);
         }
 
     }
-
-    public void getAllRepositories(String nick) throws IOException {
-        sendGet(nick);
+    private void finishTask(){
+        isTaskFinished = true;
     }
 
-    private void sendGet(String nick) throws IOException {
-        String url = "https://api.github.com/";
+    private void startTask(String nick){
+        System.out.println("tastStarted");
+        lastNicknameForTask = nick;
+        isTaskFinished = false;
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
         Repositories repositories = retrofit.create(Repositories.class);
-        Call<List<Repository>> repositories1 = repositories.repositories(nick);
-
-        repositories1.enqueue(new Callback<List<Repository>>() {
+        task = repositories.repositories(nick);
+        task.enqueue(new Callback<List<Repository>>() {
             @Override
             public void onResponse(Call<List<Repository>> call, Response<List<Repository>> response) {
-                Type type = new TypeToken<Repository[]>(){}.getType();
                 if (!response.isSuccessful() || response.body() == null){
                     listView.setAdapter(null);
                 }else {
-                    String[] strings = response.body().stream().map(Repository::getName).toArray(String[]::new);
-                    ArrayAdapter<String> adapter = new ArrayAdapter<>(LoginActivity.activity, android.R.layout.simple_list_item_1, strings);
+                    ArrayList<String> strings = new ArrayList<>();
+                    for (Repository repository : response.body()) {
+                        strings.add(repository.getName());
+                    }
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, strings);
                     listView.setAdapter(adapter);
                 }
+                finishTask();
             }
 
             @Override
             public void onFailure(Call<List<Repository>> call, Throwable t) {
                 listView.setAdapter(null);
+                finishTask();
             }
         });
     }
+
+    private void getAllRepositories(String nick) throws IOException {
+        System.out.println("executed");
+        if (!isTaskFinished)
+            return;
+        startTask(nick);
+    }
+
 }
 
